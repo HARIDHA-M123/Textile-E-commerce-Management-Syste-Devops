@@ -4,6 +4,7 @@ import {
   signOut,
   sendPasswordResetEmail,
   GoogleAuthProvider,
+  GithubAuthProvider,
   signInWithPopup,
   updateProfile,
   sendEmailVerification
@@ -12,6 +13,7 @@ import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from './config'
 
 const googleProvider = new GoogleAuthProvider()
+const githubProvider = new GithubAuthProvider()
 
 // Sign up with email & password
 export const signUp = async ({ firstName, lastName, email, phone, password }) => {
@@ -62,6 +64,31 @@ export const signInWithGoogle = async () => {
       email: user.email,
       phone: '',
       displayName: user.displayName || '',
+      role: 'customer',
+      isBlocked: false,
+      createdAt: serverTimestamp()
+    })
+  }
+
+  return user
+}
+
+// Sign in with GitHub
+export const signInWithGithub = async () => {
+  const userCredential = await signInWithPopup(auth, githubProvider)
+  const user = userCredential.user
+
+  // Check if user already exists in Firestore
+  const userDoc = await getDoc(doc(db, 'users', user.uid))
+  if (!userDoc.exists()) {
+    const nameParts = (user.displayName || '').split(' ') || [user.login || '']
+    await setDoc(doc(db, 'users', user.uid), {
+      uid: user.uid,
+      firstName: nameParts[0] || '',
+      lastName: nameParts.slice(1).join(' ') || '',
+      email: user.email || '',
+      phone: '',
+      displayName: user.displayName || user.login || '',
       role: 'customer',
       isBlocked: false,
       createdAt: serverTimestamp()
