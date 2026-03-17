@@ -1,0 +1,72 @@
+{
+  "dashboard": {
+    "title": "Coolbros E-commerce Monitoring",
+    "tags": ["ecommerce", "react", "vite"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Deployment Status",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "deployment_status",
+            "legendFormat": "{{environment}}"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Build Success Rate",
+        "type": "gauge",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "build_success_rate",
+            "legendFormat": "Success Rate"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Test Coverage Trend",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "test_coverage_percent",
+            "legendFormat": "Coverage %"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Security Vulnerabilities",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "targets": [
+          {
+            "expr": "security_vulnerabilities_total",
+            "legendFormat": "Total Vulnerabilities"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Deployment Frequency",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "targets": [
+          {
+            "expr": "rate(deployments_total[1h])",
+            "legendFormat": "Deployments per hour"
+          }
+        ]
+      }
+    ],
+    "refresh": "5m",
+    "schemaVersion": 38,
+    "version": 1
+  }
+}

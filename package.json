@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "send-metrics": "node scripts/send-grafana-metrics.js"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.1",

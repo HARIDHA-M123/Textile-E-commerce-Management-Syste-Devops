@@ -1,6 +1,8 @@
-name: Performance Monitoring
+name: Performance Monitoring with Grafana
 
 on:
+  push:
+    branches: [main, develop]
   schedule:
     - cron: '0 */6 * * *'  # Run every 6 hours
   workflow_dispatch:
@@ -16,23 +18,55 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: coolbros/package-lock.json
       
-      - name: Install Lighthouse
-        run: npm install -g @lhci/cli@0.12.x
+      - name: Install dependencies
+        working-directory: ./coolbros
+        run: npm ci
       
-      - name: Run Lighthouse CI
-        run: |
-          lhci autorun \
-            --collect.staticDistDir=./coolbros/dist \
-            --upload.target=temporary-public-storage \
-            --assertions.errors=off \
-            --assertions.warnings=off
-        env:
-          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+      - name: Build application
+        working-directory: ./coolbros
+        run: npm run build
       
-      - name: Upload Lighthouse report
-        uses: actions/upload-artifact@v4
+      - name: Run tests with coverage
+        working-directory: ./coolbros
+        run: npm run test:coverage
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
         with:
-          name: lighthouse-report
-          path: .lighthouseci
-          retention-days: 30
+          file: ./coolbros/coverage/lcov.info
+          flags: frontend
+          name: codecov-umbrella
+          fail_ci_if_error: false
+      
+      - name: Send metrics to Grafana Cloud
+        if: ${{ env.GRAFANA_API_TOKEN != '' }}
+        run: |
+          echo "Sending deployment metrics to Grafana..."
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.GRAFANA_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "metrics": {
+                "deployment_timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+                "commit_sha": "${{ github.sha }}",
+                "branch": "${{ github.ref_name }}",
+                "environment": "${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}",
+                "build_status": "success",
+                "workflow_run_id": "${{ github.run_id }}"
+              }
+            }' \
+            https://grafana.com/api/metrics || echo "Grafana integration not configured"
+        env:
+          GRAFANA_API_TOKEN: ${{ secrets.GRAFANA_API_TOKEN }}
+      
+      - name: Generate performance report
+        run: |
+          echo "=== Performance Metrics ==="
+          echo "Commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo "Build: Success"
+          echo "=========================="

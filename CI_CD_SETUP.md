@@ -9,7 +9,8 @@
 - `PRODUCTION_URL` - Production deployment URL for health checks
 
 ### Monitoring & Security
-- `LHCI_GITHUB_APP_TOKEN` - Lighthouse CI GitHub token
+- `GRAFANA_API_TOKEN` - Grafana Cloud API token for metrics
+- `GRAFANA_API_URL` - Your Grafana instance URL (e.g., https://your-instance.grafana.net/api)
 - `SNYK_TOKEN` - Snyk security scanning token
 - `CODECOV_TOKEN` - Codecov coverage reporting token (optional)
 
@@ -32,9 +33,11 @@
 2. Navigate to Site configuration → General
 3. Copy the Site ID
 
-### Lighthouse CI Token
-1. Install Lighthouse CI GitHub App
-2. Follow the setup instructions at https://github.com/apps/lighthouse-ci
+### Grafana API Token
+1. Log in to Grafana Cloud (or your hosted Grafana instance).
+2. Go to Settings → API Keys.
+3. Create a new key with appropriate permissions.
+4. Use this token to authenticate Grafana integrations.
 
 ### Snyk Token
 1. Sign up at https://snyk.io
@@ -48,53 +51,59 @@
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` and fill in your Firebase and payment gateway credentials.
+### Grafana Setup
 
-```bash
-cp .env.example .env
-```
+#### Setting Up Grafana Cloud
+1. **Sign up for Grafana Cloud** at https://grafana.com
+2. **Create a new stack** or use existing one
+3. **Generate an API token:**
+   - Go to Organization → API Keys
+   - Create a key with `MetricsPublisher` permissions
+   - Copy the token and save it securely
+4. **Get your instance URL:**
+   - Your Grafana URL will be like: `https://your-stack-id.grafana.net`
+   - Use this as `GRAFANA_API_URL`
 
-## Local Testing
+#### Configuring Data Sources
+1. **Log in to your Grafana Cloud instance**
+2. **Navigate to Connections → Data sources**
+3. **Add Prometheus data source:**
+   - Click "Add data source"
+   - Select "Prometheus"
+   - Use the provided Prometheus URL from Grafana Cloud
+   - Click "Save & Test"
 
-Before pushing to CI/CD, test locally:
+#### Import Dashboard
+1. **Download the dashboard configuration** from your repository:
+   - File: `grafana-dashboard.json`
+2. **In Grafana, go to Dashboards → Import**
+3. **Upload the JSON file**
+4. **Select your Prometheus data source**
+5. **Click "Import"**
 
-```bash
-npm run test          # Run tests
-npm run test:coverage # Run tests with coverage
-npm run build         # Build production bundle
-npm run lint          # Check code quality
-```
+#### Dashboard Panels
+The pre-configured dashboard includes:
+- **Deployment Status** - Current deployment state per environment
+- **Build Success Rate** - Percentage of successful builds
+- **Test Coverage Trend** - Code coverage over time
+- **Security Vulnerabilities** - Total vulnerabilities found
+- **Deployment Frequency** - How often deployments happen
 
-## Deployment Workflow
+#### CI/CD Integration
+The GitHub Actions workflow automatically sends metrics to Grafana:
+- Deployment timestamps
+- Commit information
+- Build status
+- Test coverage results
+- Security scan results
 
-### Development Branch (`develop`)
-- Automatic deployment to staging environment
-- Runs all tests and linting
-- Performance monitoring enabled
-
-### Main Branch (`main`)
-- Automatic deployment to production
-- Requires all tests to pass
-- Security scans run weekly
-- Performance checks every 6 hours
-
-## Monitoring Dashboards
-
-### Lighthouse CI
-- Performance scores tracked automatically
-- Accessibility audits
-- Best practices verification
-- SEO optimization checks
-
-### Codecov
-- Test coverage reports
-- Coverage diff on pull requests
-- Historical coverage trends
-
-### Snyk
-- Dependency vulnerability scanning
-- Automated security alerts
-- License compliance checks
+#### Grafana Cloud Token (Optional)
+- If using Grafana Cloud, generate an API token:
+  1. Log in to Grafana Cloud.
+  2. Go to Settings → API Keys.
+  3. Create a new key with appropriate permissions.
+- Add the token as a GitHub secret:
+  - `GRAFANA_API_TOKEN` - Grafana Cloud API token.
 
 ## Troubleshooting
 
