@@ -25,21 +25,21 @@ jobs:
           cache-dependency-path: package-lock.json
       
       - name: Install dependencies
-        working-directory: ./coolbros
+        working-directory: .
         run: npm ci
       
       - name: Build application
-        working-directory: ./coolbros
+        working-directory: .
         run: npm run build
       
       - name: Run tests with coverage
-        working-directory: ./coolbros
+        working-directory: .
         run: npm run test:coverage
       
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
-          file: ./coolbros/coverage/lcov.info
+          file: ./coverage/lcov.info
           flags: frontend
           name: codecov-umbrella
           fail_ci_if_error: false
