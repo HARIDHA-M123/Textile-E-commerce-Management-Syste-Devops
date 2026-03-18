@@ -66,7 +66,8 @@ Your application now supports **three login methods**:
 Your app is already running! Just test it:
 
 1. **Go to Login page:**
-   http://localhost:5173/login
+   http://localhost:5174/login
+   *(or whatever port your dev server shows)*
 
 2. **You should see three options:**
    - Email & Password form
