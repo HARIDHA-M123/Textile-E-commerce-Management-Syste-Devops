@@ -15,13 +15,14 @@ async function sendMetrics(metrics) {
   }
 
   try {
-    const response = await fetch(`${GRAFANA_API_URL}/metrics`, {
+    // Use Grafana Cloud's Prometheus remote write endpoint
+    const response = await fetch(`${GRAFANA_API_URL}/api/v1/import/prometheus`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${GRAFANA_API_TOKEN}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(metrics)
+      body: JSON.stringify({ metrics })
     });
 
     if (response.ok) {
