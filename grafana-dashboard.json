@@ -1,9 +1,8 @@
 {
-  "dashboard": {
-    "title": "Coolbros E-commerce Monitoring",
-    "tags": ["ecommerce", "react", "vite"],
-    "timezone": "browser",
-    "panels": [
+  "title": "Coolbros E-commerce Monitoring",
+  "tags": ["ecommerce", "react", "vite"],
+  "timezone": "browser",
+  "panels": [
       {
         "id": 1,
         "title": "Deployment Status",
@@ -64,9 +63,9 @@
           }
         ]
       }
-    ],
-    "refresh": "5m",
-    "schemaVersion": 38,
-    "version": 1
-  }
+  ],
+  "refresh": "5m",
+  "schemaVersion": 38,
+  "version": 1,
+  "uid": "coolbros-monitoring"
 }
