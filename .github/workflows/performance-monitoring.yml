@@ -49,58 +49,38 @@ jobs:
       - name: Send metrics to Grafana Cloud
         run: |
           echo "Sending deployment metrics to Grafana..."
-                
+                  
           # Determine build status
           BUILD_STATUS=1
-                
+                  
           # Extract test coverage from coverage report
           COVERAGE=$(grep -o '"pct":[0-9.]*' ./coverage/coverage-summary.json 2>/dev/null | head -1 | cut -d':' -f2 || echo "0")
-                
+          
+          # Get current timestamp in milliseconds
+          TIMESTAMP=$(date +%s)000
+                  
+          # Send metrics in Prometheus format
           curl -X POST \
             -H "Authorization: Bearer ${{ secrets.GRAFANA_API_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "metrics": [
-                {
-                  "metric": "deployment_status",
-                  "value": 1,
-                  "timestamp": '$(date +%s)'000,
-                  "labels": {
-                    "environment": "${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}",
-                    "branch": "${{ github.ref_name }}",
-                    "commit": "${{ github.sha }}"
-                  }
-                },
-                {
-                  "metric": "build_success_rate",
-                  "value": "'"$BUILD_STATUS"'",
-                  "timestamp": '$(date +%s)'000,
-                  "labels": {
-                    "branch": "${{ github.ref_name }}",
-                    "workflow": "${{ github.workflow }}"
-                  }
-                },
-                {
-                  "metric": "test_coverage_percent",
-                  "value": "'"$COVERAGE"'",
-                  "timestamp": '$(date +%s)'000,
-                  "labels": {
-                    "branch": "${{ github.ref_name }}",
-                    "project": "coolbros"
-                  }
-                },
-                {
-                  "metric": "deployments_total",
-                  "value": 1,
-                  "timestamp": '$(date +%s)'000,
-                  "labels": {
-                    "environment": "${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}",
-                    "status": "success"
-                  }
-                }
-              ]
-            }' \
-            ${{ secrets.GRAFANA_API_URL }}/api/v1/import/prometheus || echo "Failed to send metrics to Grafana"
+            -H "Content-Type: text/plain" \
+            -d '
+# HELP deployment_status Current deployment status (1 = success)
+# TYPE deployment_status gauge
+deployment_status{environment="${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}",branch="${{ github.ref_name }}"} 1
+
+# HELP build_success_rate Build success indicator
+# TYPE build_success_rate gauge
+build_success_rate{branch="${{ github.ref_name }}"} 1
+
+# HELP test_coverage_percent Test coverage percentage
+# TYPE test_coverage_percent gauge
+test_coverage_percent{branch="${{ github.ref_name }}",project="coolbros"} '$COVERAGE'
+
+# HELP deployments_total Total number of deployments
+# TYPE deployments_total counter
+deployments_total{environment="${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}",status="success"} 1
+' \
+            ${{ secrets.GRAFANA_API_URL }}/api/v1/push || echo "Failed to send metrics to Grafana"
                   
           echo "✅ Metrics sent to Grafana successfully"
         env:
