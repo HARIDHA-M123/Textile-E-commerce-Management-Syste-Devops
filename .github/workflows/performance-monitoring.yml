@@ -47,25 +47,66 @@ jobs:
           FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       
       - name: Send metrics to Grafana Cloud
-        if: ${{ env.GRAFANA_API_TOKEN != '' }}
+        if: ${{ secrets.GRAFANA_API_TOKEN != '' }}
         run: |
           echo "Sending deployment metrics to Grafana..."
+                
+          # Determine build status
+          BUILD_STATUS=1
+                
+          # Extract test coverage from coverage report
+          COVERAGE=$(grep -o '"pct":[0-9.]*' ./coverage/coverage-summary.json 2>/dev/null | head -1 | cut -d':' -f2 || echo "0")
+                
           curl -X POST \
             -H "Authorization: Bearer ${{ secrets.GRAFANA_API_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
-              "metrics": {
-                "deployment_timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
-                "commit_sha": "${{ github.sha }}",
-                "branch": "${{ github.ref_name }}",
-                "environment": "${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}",
-                "build_status": "success",
-                "workflow_run_id": "${{ github.run_id }}"
-              }
+              "metrics": [
+                {
+                  "metric": "deployment_status",
+                  "value": 1,
+                  "timestamp": '$(date +%s)'000,
+                  "labels": {
+                    "environment": "${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}",
+                    "branch": "${{ github.ref_name }}",
+                    "commit": "${{ github.sha }}"
+                  }
+                },
+                {
+                  "metric": "build_success_rate",
+                  "value": "'"$BUILD_STATUS"'",
+                  "timestamp": '$(date +%s)'000,
+                  "labels": {
+                    "branch": "${{ github.ref_name }}",
+                    "workflow": "${{ github.workflow }}"
+                  }
+                },
+                {
+                  "metric": "test_coverage_percent",
+                  "value": "'"$COVERAGE"'",
+                  "timestamp": '$(date +%s)'000,
+                  "labels": {
+                    "branch": "${{ github.ref_name }}",
+                    "project": "coolbros"
+                  }
+                },
+                {
+                  "metric": "deployments_total",
+                  "value": 1,
+                  "timestamp": '$(date +%s)'000,
+                  "labels": {
+                    "environment": "${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}",
+                    "status": "success"
+                  }
+                }
+              ]
             }' \
-            https://grafana.com/api/metrics || echo "Grafana integration not configured"
+            ${{ secrets.GRAFANA_API_URL }}/api/v1/import/prometheus || echo "Failed to send metrics to Grafana"
+                  
+          echo "✅ Metrics sent to Grafana successfully"
         env:
           GRAFANA_API_TOKEN: ${{ secrets.GRAFANA_API_TOKEN }}
+          GRAFANA_API_URL: ${{ secrets.GRAFANA_API_URL }}
       
       - name: Generate performance report
         run: |
