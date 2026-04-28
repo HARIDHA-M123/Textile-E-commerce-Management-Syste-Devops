@@ -18,19 +18,23 @@ jobs:
       - uses: actions/checkout@v5
       
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
+          cache-dependency-path: package-lock.json
       
       - name: Install dependencies
-        run: npm ci || npm install
+        working-directory: .
+        run: npm ci
       
       - name: Build application
-        run: npm run build || echo "Build failed but continuing..."
+        working-directory: .
+        run: npm run build
       
       - name: Run tests with coverage
-        run: npm run test:coverage || echo "Tests failed but continuing..."
+        working-directory: .
+        run: npm run test:coverage
       
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -43,45 +47,25 @@ jobs:
           FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       
       - name: Send metrics to Grafana Cloud
+        if: ${{ env.GRAFANA_API_TOKEN != '' }}
         run: |
           echo "Sending deployment metrics to Grafana..."
-                  
-          # Determine build status
-          BUILD_STATUS=1
-                  
-          # Extract test coverage from coverage report
-          COVERAGE=$(grep -o '"pct":[0-9.]*' ./coverage/coverage-summary.json 2>/dev/null | head -1 | cut -d':' -f2 || echo "0")
-          
-          # Get current timestamp in milliseconds
-          TIMESTAMP=$(date +%s)000
-                  
-          # Send metrics in Prometheus format
           curl -X POST \
             -H "Authorization: Bearer ${{ secrets.GRAFANA_API_TOKEN }}" \
-            -H "Content-Type: text/plain" \
-            -d '
-# HELP deployment_status Current deployment status (1 = success)
-# TYPE deployment_status gauge
-deployment_status{environment="${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}",branch="${{ github.ref_name }}"} 1
-
-# HELP build_success_rate Build success indicator
-# TYPE build_success_rate gauge
-build_success_rate{branch="${{ github.ref_name }}"} 1
-
-# HELP test_coverage_percent Test coverage percentage
-# TYPE test_coverage_percent gauge
-test_coverage_percent{branch="${{ github.ref_name }}",project="coolbros"} '$COVERAGE'
-
-# HELP deployments_total Total number of deployments
-# TYPE deployments_total counter
-deployments_total{environment="${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}",status="success"} 1
-' \
-            ${{ secrets.GRAFANA_API_URL }}/api/v1/push || echo "Failed to send metrics to Grafana"
-                  
-          echo "✅ Metrics sent to Grafana successfully"
+            -H "Content-Type: application/json" \
+            -d '{
+              "metrics": {
+                "deployment_timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+                "commit_sha": "${{ github.sha }}",
+                "branch": "${{ github.ref_name }}",
+                "environment": "${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}",
+                "build_status": "success",
+                "workflow_run_id": "${{ github.run_id }}"
+              }
+            }' \
+            https://grafana.com/api/metrics || echo "Grafana integration not configured"
         env:
           GRAFANA_API_TOKEN: ${{ secrets.GRAFANA_API_TOKEN }}
-          GRAFANA_API_URL: ${{ secrets.GRAFANA_API_URL }}
       
       - name: Generate performance report
         run: |
